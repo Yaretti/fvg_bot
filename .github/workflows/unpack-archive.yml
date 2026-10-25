@@ -1,0 +1,29 @@
+
+name: Unpack bot archive
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract project files
+        run: |
+          test -f fvg-bot.zip
+          mkdir /tmp/fvg-unpack
+          unzip -q fvg-bot.zip -d /tmp/fvg-unpack
+          test -d /tmp/fvg-unpack/fvg_bot_project
+          cp -a /tmp/fvg-unpack/fvg_bot_project/. .
+          git add -A
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Extract FVG bot project"
+            git push
+          fi
