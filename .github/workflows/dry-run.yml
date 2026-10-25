@@ -1,0 +1,59 @@
+
+name: Binance FVG Dry Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: "Тривалість WebSocket-тесту в секундах"
+        required: true
+        default: "90"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      DRY_RUN: "true"
+      DB_PATH: dry_run.sqlite3
+      LOG_FILE: dry_run.log
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Extract project archive
+        run: |
+          mkdir -p /tmp/fvg-unpack
+          unzip -oq fvg-bot.zip -d /tmp/fvg-unpack
+          test -f /tmp/fvg-unpack/fvg_bot_project/requirements.txt
+          cp -a /tmp/fvg-unpack/fvg_bot_project/. .
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Check live Binance data once
+        run: python -m fvg_bot --once --dry-run
+
+      - name: Run WebSocket monitoring
+        run: python -m fvg_bot --dry-run --duration "${{ inputs.duration }}"
+
+      - name: Save test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-dry-run-results
+          if-no-files-found: warn
+          path: |
+            dry_run.log
+            dry_run.sqlite3
