@@ -12,13 +12,33 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -r requirements-dev.txt
-      - run: pytest -q
+
+      - name: Check archive exists
+        run: test -f fvg-bot.zip
+
+      - name: Extract project archive
+        run: |
+          mkdir -p /tmp/fvg-unpack
+          unzip -oq fvg-bot.zip -d /tmp/fvg-unpack
+          test -f /tmp/fvg-unpack/fvg_bot_project/requirements-dev.txt
+          cp -a /tmp/fvg-unpack/fvg_bot_project/. .
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run automated tests
+        run: python -m pytest -q
